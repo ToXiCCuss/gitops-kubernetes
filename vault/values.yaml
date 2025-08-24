@@ -1,0 +1,16 @@
+injector:
+  agentDefaults:
+    cpuLimit: "250m"
+    cpuRequest: "0"
+    memLimit: "64Mi"
+    memRequest: "0"
+  logFormat: "json"
+  affinity: ""
+  ui:
+    enabled: true
+  server:
+    ha:
+      enabled: true
+      replicas: 1
+      raft:
+        enabled: true

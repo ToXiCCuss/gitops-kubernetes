@@ -1,0 +1,189 @@
+global:
+  image:
+    repository: quay.io/argoproj/argocd
+    tag: "v3.0.12"
+  logging:
+    format: json
+    level: info
+
+configs:
+  params:
+    server.insecure: true
+
+controller:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 2Gi
+    requests:
+      cpu: 0
+      memory: 0
+
+dex:
+  enabled: false
+
+server:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 0
+      memory: 0
+
+applicationSet:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 0
+      memory: 0
+
+redis:
+  image:
+    repository: docker.io/redis
+    tag: 8.0.2-alpine
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 0
+      memory: 0
+notifications:
+  enabled: false
+
+
+repoServer:
+  volumes:
+    - configMap:
+        name: cmp-plugin
+      name: cmp-plugin
+    - name: custom-tools
+      emptyDir: {}
+  initContainers:
+    - name: download-tools
+      image: registry.access.redhat.com/ubi8
+      env:
+        - name: AVP_VERSION
+          value: 1.16.1
+      command: [sh, -c]
+      args:
+        - >-
+          curl -L https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v$(AVP_VERSION)/argocd-vault-plugin_$(AVP_VERSION)_linux_amd64 -o argocd-vault-plugin &&
+          chmod +x argocd-vault-plugin &&
+          mv argocd-vault-plugin /custom-tools/
+      volumeMounts:
+        - mountPath: /custom-tools
+          name: custom-tools
+  extraContainers:
+    - name: avp
+      command: [/var/run/argocd/argocd-cmp-server]
+      image: registry.access.redhat.com/ubi8
+      env:
+        - name: ARGOCD_ENV_VAULT_ADDR
+          value: "http://vault.vault:8200"
+        - name: ARGOCD_ENV_AVP_AUTH_TYPE
+          value: "k8s"
+        - name: ARGOCD_ENV_AVP_K8S_ROLE
+          value: argocd
+        - name: ARGOCD_ENV_AVP_TYPE
+          value : vault
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: avp.yaml
+          name: cmp-plugin
+        - name: custom-tools
+          subPath: argocd-vault-plugin
+          mountPath: /usr/local/bin/argocd-vault-plugin
+    - name: avp-helm
+      command: [/var/run/argocd/argocd-cmp-server]
+      image: quay.io/argoproj/argocd:v3.0.12
+      env:
+        - name: ARGOCD_ENV_VAULT_ADDR
+          value: "http://vault.vault:8200"
+        - name: ARGOCD_ENV_AVP_AUTH_TYPE
+          value: "k8s"
+        - name: ARGOCD_ENV_AVP_K8S_ROLE
+          value: argocd
+        - name: ARGOCD_ENV_AVP_TYPE
+          value : vault
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /tmp
+          name: tmp
+
+        # Register plugins into sidecar
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: avp-helm.yaml
+          name: cmp-plugin
+
+        # Important: Mount tools into $PATH
+        - name: custom-tools
+          subPath: argocd-vault-plugin
+          mountPath: /usr/local/bin/argocd-vault-plugin
+
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cmp-plugin
+      namespace: argocd
+    data:
+      avp.yaml: |
+        apiVersion: argoproj.io/v1alpha1
+        kind: ConfigManagementPlugin
+        metadata:
+          name: argocd-vault-plugin
+          namespace: argocd
+        spec:
+          allowConcurrency: true
+          discover:
+            find:
+              command:
+                - sh
+                - "-c"
+                - "find . -name '*.yaml' ! -name '*values.yaml' | xargs -I {} grep \"<path\\|avp\\.kubernetes\\.io\" {} | grep ."
+          generate:
+            command:
+              - sh
+              - "-c"
+              - "for file in $(find . -type f -name '*.yaml' ! -name 'values.yaml' ! -path '*/statics/*'); do argocd-vault-plugin generate --verbose-sensitive-output \"$file\"; done"
+          lockRepo: false
+      avp-helm.yaml: |
+        apiVersion: argoproj.io/v1alpha1
+        kind: ConfigManagementPlugin
+        metadata:
+          name: argocd-vault-plugin-helm
+        spec:
+          allowConcurrency: true
+          discover:
+            find:
+              command:
+                - sh
+                - "-c"
+                - "find . -name 'Chart.yaml' && find . -name 'values.yaml'"
+          generate:
+            command:
+              - bash
+              - "-c"
+              - |
+                HELM_OUTPUT=$(helm template $ARGOCD_APP_NAME -n $ARGOCD_APP_NAMESPACE -f <(echo "$ARGOCD_ENV_HELM_VALUES") .)
+                echo "$HELM_OUTPUT" | argocd-vault-plugin generate -
+          lockRepo: false
