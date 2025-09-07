@@ -1,7 +1,4 @@
 global:
-  image:
-    repository: quay.io/argoproj/argocd
-    tag: "v3.0.12"
   logging:
     format: json
     level: info
