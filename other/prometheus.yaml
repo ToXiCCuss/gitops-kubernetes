@@ -1,0 +1,292 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+  namespace: argocd
+spec:
+  destination:
+    namespace: prometheus
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 77.1.1
+    plugin:
+      env:
+        - name: HELM_VALUES
+          value: |
+            fullnameOverride: prometheus
+            defaultRules:
+              create: false
+            alertmanager:
+              enabled: false
+            grafana:
+              enabled: true
+              fullnameOverride: grafana
+              forceDeployDatasources: false
+              forceDeployDashboards: false
+              defaultDashboardsEnabled: false
+              defaultDashboardsTimezone: Europe/Berlin
+              serviceMonitor:
+                enabled: true
+              adminPassword: <path:argocd/data/prometheus#password>
+            kubeApiServer:
+              enabled: true
+            kubelet:
+              enabled: true
+              serviceMonitor:
+                metricRelabelings:
+                  - action: replace
+                    sourceLabels:
+                      - node
+                    targetLabel: instance
+            kubeControllerManager:
+              enabled: true
+              endpoints:
+                - k8s.server.lan
+            coreDns:
+              enabled: true
+            kubeDns:
+              enabled: false
+            kubeEtcd:
+              enabled: true
+              endpoints:
+                - k8s.server.lan
+            kubeScheduler:
+              enabled: true
+              endpoints:
+                - k8s.server.lan
+            kubeProxy:
+              enabled: true
+              endpoints:
+                - k8s.server.lan
+            kubeStateMetrics:
+              enabled: true
+            kube-state-metrics:
+              fullnameOverride: kube-state-metrics
+              selfMonitor:
+                enabled: true
+              resources:
+                limits:
+                  memory: 100Mi
+                  cpu: 250m
+              prometheus:
+                monitor:
+                  enabled: true
+                  relabelings:
+                    - action: replace
+                      regex: (.*)
+                      replacement: $1
+                      sourceLabels:
+                        - __meta_kubernetes_pod_node_name
+                      targetLabel: kubernetes_node
+            nodeExporter:
+              enabled: true
+              resources:
+                limits:
+                  memory: 100Mi
+                  cpu: 250m
+              serviceMonitor:
+                relabelings:
+                  - action: replace
+                    regex: (.*)
+                    replacement: $1
+                    sourceLabels:
+                      - __meta_kubernetes_pod_node_name
+                    targetLabel: kubernetes_node
+            prometheus-node-exporter:
+              fullnameOverride: node-exporter
+              podLabels:
+                jobLabel: node-exporter
+              extraArgs:
+                - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+                - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
+              prometheus:
+                monitor:
+                  enabled: true
+                  relabelings:
+                    - action: replace
+                      regex: (.*)
+                      replacement: $1
+                      sourceLabels:
+                        - __meta_kubernetes_pod_node_name
+                      targetLabel: kubernetes_node
+            prometheusOperator:
+              enabled: true
+              resources:
+                limits:
+                  memory: 100Mi
+                  cpu: 500m
+            prometheus:
+              enabled: true
+              prometheusSpec:
+                replicas: 1
+                replicaExternalLabelName: "replica"
+                ruleSelectorNilUsesHelmValues: false
+                serviceMonitorSelectorNilUsesHelmValues: false
+                podMonitorSelectorNilUsesHelmValues: false
+                probeSelectorNilUsesHelmValues: false
+                retention: 30d
+                storageSpec:
+                  volumeClaimTemplate:
+                    spec:
+                      storageClassName: local-path
+                      resources:
+                        requests:
+                          storage: 100Gi
+                retentionSize: "50GB"
+                enableAdminAPI: true
+                walCompression: true
+                scrapeInterval: 30s
+                evaluationInterval: 30s
+                resources:
+                  limits:
+                    memory: 4Gi
+                    cpu: 1
+                additionalScrapeConfigs: |
+                  - job_name: cadvisor-docker
+                    scrape_interval: 30s
+                    metrics_path: /metrics
+                    static_configs:
+                      - targets:
+                          - docker.server.lan:8080
+                    relabel_configs:
+                      - target_label: job
+                        replacement: cadvisor-docker
+                  - job_name: istiod
+                    scrape_interval: 30s
+                    kubernetes_sd_configs:
+                      - namespaces:
+                          names:
+                            - istio-system
+                        role: endpoints
+                    relabel_configs:
+                      - action: keep
+                        regex: istiod;http-monitoring
+                        source_labels:
+                          - __meta_kubernetes_service_name
+                          - __meta_kubernetes_endpoint_port_name
+                  - job_name: envoy-stats
+                    scrape_interval: 30s
+                    kubernetes_sd_configs:
+                      - role: pod
+                    metrics_path: /stats/prometheus
+                    relabel_configs:
+                      - action: keep
+                        regex: .*-envoy-prom
+                        source_labels:
+                          - __meta_kubernetes_pod_container_port_name
+                  - job_name: node-exporter
+                    scrape_interval: 30s
+                    metrics_path: /metrics
+                    static_configs:
+                      - targets:
+                          - mariadb.server.lan:9100
+                          - postgresql.server.lan:9100
+                          - docker.server.lan:9100
+                    relabel_configs:
+                      - target_label: job
+                        replacement: node-exporter
+                  - job_name: mariadb
+                    scrape_interval: 30s
+                    metrics_path: /metrics
+                    static_configs:
+                      - targets: ["mariadb.server.lan:9104"]
+                    relabel_configs:
+                      - target_label: job
+                        replacement: mariadb
+                  - job_name: postgresql
+                    scrape_interval: 30s
+                    metrics_path: /metrics
+                    static_configs:
+                      - targets: ["postgresql.server.lan:9187"]
+                    relabel_configs:
+                      - target_label: job
+                        replacement: postgresql
+            thanosRuler:
+              enabled: false
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus-sm
+  namespace: prometheus
+spec:
+  serviceMonitorSelector: {}
+  serviceMonitorNamespaceSelector: {}
+
+---
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: prometheus
+  namespace: prometheus
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "grafana.vpn.rjst.de"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        credentialName: prometheus-cert
+        mode: SIMPLE
+      hosts:
+        - "grafana.vpn.rjst.de"
+
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prometheus-cert
+  namespace: istio-system
+spec:
+  secretName: prometheus-cert
+  issuerRef:
+    name: self-issuer
+    kind: ClusterIssuer
+  commonName: "grafana.vpn.rjst.de"
+  dnsNames:
+    - "grafana.vpn.rjst.de"
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: prometheus
+  namespace: prometheus
+spec:
+  hosts:
+    - "grafana.vpn.rjst.de"
+  gateways:
+    - prometheus
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: grafana
+            port:
+              number: 80
+

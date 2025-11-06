@@ -1,0 +1,180 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  namespace: argocd
+spec:
+  destination:
+    namespace: harbor
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - repoURL: 'registry-1.docker.io/bitnamicharts'
+      path: 'harbor'
+      targetRevision: 27.0.3
+      chart: harbor
+      plugin:
+        env:
+          - name: HELM_VALUES
+            value: |
+              adminPassword: <path:argocd/data/harbor#adminPassword>
+              registry:
+                relativeurls: true
+                credentials:
+                  password: <path:argocd/data/harbor#registryPassword>
+                  htpasswd: <path:argocd/data/harbor#registryHtpasswd>
+              postgresql:
+                enabled: false
+              externalDatabase:
+                host: postgresql.server.lan
+                port: 5432
+                user: app_harbor
+                password: <path:argocd/data/harbor#postgresqlPassword>
+                sslmode: disable
+                coreDatabase: "harbor"
+              externalURL: https://harbor.vpn.rjst.de
+              volumePermissions:
+                enabled: true
+              service:
+                type: ClusterIP
+                resources:
+                  requests:
+                    memory: "0Mi"
+                    cpu: "0m"
+                  limits:
+                    memory: "192Mi"
+                    cpu: "150m"
+              nginx:
+                resources:
+                  requests:
+                    memory: "0Mi"
+                    cpu: "0m"
+                  limits:
+                    memory: "768Mi"
+                    cpu: "750m"
+                tls:
+                  enabled: false
+              portal:
+                resources:
+                  requests:
+                    memory: "0Mi"
+                    cpu: "0m"
+                  limits:
+                    memory: "768Mi"
+                    cpu: "750m"
+              core:
+                resources:
+                  requests:
+                    memory: "0Mi"
+                    cpu: "0m"
+                  limits:
+                    memory: "768Mi"
+                    cpu: "750m"
+              jobservice:
+                jobLogger: stdout
+                resources:
+                  requests:
+                    memory: "0Mi"
+                    cpu: "0m"
+                  limits:
+                    memory: "768Mi"
+                    cpu: "750m"
+                server:
+                  resources:
+                    requests:
+                      memory: "0Mi"
+                      cpu: "0m"
+                    limits:
+                      memory: "768Mi"
+                      cpu: "750m"
+                controller:
+                  resources:
+                    requests:
+                      memory: "0Mi"
+                      cpu: "0m"
+                    limits:
+                      memory: "768Mi"
+                      cpu: "750m"
+              redis:
+                enabled: true
+                master:
+                  resources:
+                    requests:
+                      memory: "0Mi"
+                      cpu: "0m"
+                    limits:
+                      memory: "192Mi"
+                      cpu: "150m"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: harbor-core
+  namespace: harbor
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "harbor.vpn.rjst.de"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        credentialName: harbor-cert
+        mode: SIMPLE
+      hosts:
+        - "harbor.vpn.rjst.de"
+
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harbor-cert
+  namespace: istio-system
+spec:
+  secretName: harbor-cert
+  issuerRef:
+    name: self-issuer
+    kind: ClusterIssuer
+  commonName: "harbor.vpn.rjst.de"
+  dnsNames:
+    - "harbor.vpn.rjst.de"
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: harbor-core
+  namespace: harbor
+spec:
+  hosts:
+    - "harbor.vpn.rjst.de"
+  gateways:
+    - harbor-core
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: harbor
+            port:
+              number: 80

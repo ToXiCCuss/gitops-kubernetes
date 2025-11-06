@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redis
+  namespace: argocd
+spec:
+  destination:
+    namespace: redis
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - repoURL: 'registry-1.docker.io/bitnamicharts'
+      path: 'redis'
+      targetRevision: 21.2.13
+      chart: redis
+      plugin:
+        env:
+          - name: HELM_VALUES
+            value: |
+              auth:
+                password: <path:argocd/data/redis#password>
+              master:
+                resources:
+                  requests:
+                    cpu: "0"
+                    memory: "0Mi"
+                  limits:
+                    cpu: "2"
+                    memory: "1Gi"
+                service:
+                  type: LoadBalancer
+                  externalTrafficPolicy: Local
+              replica:
+                resources:
+                  requests:
+                    cpu: "0"
+                    memory: "0Mi"
+                  limits:
+                    cpu: "2"
+                    memory: "1Gi"
+              metrics:
+                enabled: true
+                resources:
+                  requests:
+                    cpu: 0
+                    memory: 0Mi
+                  limits:
+                    cpu: 150m
+                    memory: 192Mi
+                serviceMonitor:
+                  enabled: true
+                  namespace: "prometheus"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

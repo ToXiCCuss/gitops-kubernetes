@@ -1,0 +1,141 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+spec:
+  destination:
+    namespace: vault
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.28.1
+    plugin:
+      env:
+        - name: HELM_VALUES
+          value: |
+            skipVaultPlugin: true
+            injector:
+              agentDefaults:
+                cpuLimit: "250m"
+                cpuRequest: "0"
+                memLimit: "64Mi"
+                memRequest: "0"
+              logFormat: "json"
+              affinity: ""
+            ui:
+              enabled: true
+            server:
+              ha:
+                enabled: true
+                replicas: 1
+                raft:
+                  enabled: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+---
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: vault
+  namespace: vault
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "vault.vpn.rjst.de"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        credentialName: vault-cert
+        mode: SIMPLE
+      hosts:
+        - "vault.vpn.rjst.de"
+
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: vault-cert
+  namespace: istio-system
+spec:
+  secretName: vault-cert
+  issuerRef:
+    name: self-issuer
+    kind: ClusterIssuer
+  commonName: "vault.vpn.rjst.de"
+  dnsNames:
+    - "vault.vpn.rjst.de"
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: vault
+  namespace: vault
+spec:
+  hosts:
+    - "vault.vpn.rjst.de"
+  gateways:
+    - vault
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: vault
+            port:
+              number: 8200
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-unsealer
+  namespace: argocd
+spec:
+  destination:
+    namespace: vault
+    server: https://kubernetes.default.svc
+  project: default
+  sources:
+    - repoURL: 'ghcr.io/bakito/helm-charts'
+      path: 'vault-unsealer'
+      targetRevision: 0.4.0
+      chart: vault-unsealer
+      plugin:
+        env:
+          - name: HELM_VALUES
+            value: |
+              skipVaultPlugin: true
+              resources:
+                requests:
+                  cpu: 0m
+                  memory: 0Mi
+                limits:
+                  cpu: 200m
+                  memory: 512Mi
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

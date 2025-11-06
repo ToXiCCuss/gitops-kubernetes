@@ -1,0 +1,64 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: elastic-system
+  namespace: elastic-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "logging.vpn.rjst.de"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        credentialName: elastic-system-cert
+        mode: SIMPLE
+      hosts:
+        - "logging.vpn.rjst.de"
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: elastic-system
+  namespace: elastic-system
+spec:
+  hosts:
+    - "logging.vpn.rjst.de"
+  gateways:
+    - elastic-system
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: kibana
+            port:
+              number: 5601
+
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: elastic-system-cert
+  namespace: istio-system
+spec:
+  secretName: elastic-system-cert
+  issuerRef:
+    name: self-issuer
+    kind: ClusterIssuer
+  commonName: "logging.vpn.rjst.de"
+  dnsNames:
+    - "logging.vpn.rjst.de"

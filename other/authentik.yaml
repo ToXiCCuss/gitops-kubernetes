@@ -1,0 +1,160 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authentik
+  namespace: argocd
+spec:
+  destination:
+    namespace: authentik
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: https://charts.goauthentik.io
+    chart: authentik
+    targetRevision: 2025.8.1
+    plugin:
+      env:
+        - name: HELM_VALUES
+          value: |
+            global:
+              securityContext:
+                runAsUser: 1000
+                runAsGroup: 1000
+                fsGroup: 1000
+            authentik:
+              secret_key: <path:argocd/data/authentik#secret.key>
+              email:
+                host: "smtp.gmail.com"
+                port: 587
+                username: <path:argocd/data/authentik#email.username>
+                password: <path:argocd/data/authentik#email.password>
+                use_tls: true
+                from: "rjstdevelopement@gmail.com"
+              postgresql:
+                host: "postgresql.server.lan"
+                port: 5432
+                name: "authentik"
+                user: "app_authentik"
+                password: <path:argocd/data/authentik#postgresql.password>
+            server:
+              resources:
+                requests:
+                  memory: "0"
+                  cpu: "0"
+                limits:
+                  memory: 1Gi
+                  cpu: 1
+              containerSecurityContext:
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                seccompProfile:
+                  type: RuntimeDefault
+                capabilities:
+                  drop:
+                    - ALL
+            worker:
+              resources:
+                requests:
+                  memory: "0"
+                  cpu: "0"
+                limits:
+                  cpu: 1
+                  memory: 1Gi
+              containerSecurityContext:
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                seccompProfile:
+                  type: RuntimeDefault
+                capabilities:
+                  drop:
+                    - ALL
+            redis:
+              enabled: true
+              master:
+                resources:
+                  requests:
+                    cpu: "0"
+                    memory: "0Mi"
+                  limits:
+                    cpu: "2"
+                    memory: "1Gi"
+              replica:
+                resources:
+                  requests:
+                    cpu: "0"
+                    memory: "0Mi"
+                  limits:
+                    cpu: "2"
+                    memory: "1Gi"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: authentik
+  namespace: authentik
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "authentik.rjst.de"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        credentialName: authentik-cert
+        mode: SIMPLE
+      hosts:
+        - "authentik.rjst.de"
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authentik-cert
+  namespace: istio-system
+spec:
+  secretName: authentik-cert
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  commonName: "authentik.rjst.de"
+  dnsNames:
+    - "authentik.rjst.de"
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: authentik
+  namespace: authentik
+spec:
+  hosts:
+    - "authentik.rjst.de"
+  gateways:
+    - authentik
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: authentik-server
+            port:
+              number: 80
