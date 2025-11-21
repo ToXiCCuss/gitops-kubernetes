@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "kubernetes": {
+    "fileMatch": [
+      "Kubernetes/deployed/.+\\.yaml$"
+    ]
+  },
+  "argocd": {
+    "fileMatch": [
+      "Kubernetes/deployed/.+\\.yaml$"
+    ]
+  },
+  "helm-values": {
+    "fileMatch": [
+      "Kubernetes/deployed/.+\\.yaml$"
+    ]
+  },
+  "packageRules": [
+    {
+      "matchUpdateTypes": [
+        "major"
+      ]
+    },
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    }
+  ],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "branchConcurrentLimit": 0,
+  "ignoreDeps": [
+    "harbor.vpn.rjst.de/dev/chart/rjst-backup"
+  ]
+}
