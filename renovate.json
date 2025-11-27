@@ -7,7 +7,7 @@
   ],
   "argocd": {
     "managerFilePatterns": [
-      "/Kubernetes/deployed/.+\\.yaml$/"
+      "/argo/.+\\.yaml$/"
     ]
   }
 }
