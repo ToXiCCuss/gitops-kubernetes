@@ -6,8 +6,8 @@
     ":prHourlyLimitNone"
   ],
   "argocd": {
-    "fileMatch": [
-      "Kubernetes/deployed/.+\\.yaml$"
+    "managerFilePatterns": [
+      "/Kubernetes/deployed/.+\\.yaml$/"
     ]
   }
 }
