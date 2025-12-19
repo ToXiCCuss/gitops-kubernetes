@@ -15,8 +15,8 @@ spec:
     helm:
       valueFiles: 
       - $values/vault/values.yaml
-    targetRevision: 0.30.1
-  - repoURL: https://github.com/RStenzhorn/gitops.git
+    targetRevision: 0.31.0
+  - repoURL: https://github.com/ToXiCCuss/gitops-kubernetes.git
     targetRevision: HEAD
     ref: values
   syncPolicy:
