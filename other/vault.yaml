@@ -125,7 +125,6 @@ spec:
         env:
           - name: HELM_VALUES
             value: |
-              skipVaultPlugin: true
               resources:
                 requests:
                   cpu: 0m
@@ -133,7 +132,6 @@ spec:
                 limits:
                   cpu: 200m
                   memory: 512Mi
-
   syncPolicy:
     automated:
       prune: true
