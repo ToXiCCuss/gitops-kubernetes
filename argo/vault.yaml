@@ -1,3 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+spec:
+  destination:
+    namespace: vault
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.31.0
+    plugin:
+      env:
+        - name: HELM_VALUES
+          value: |
+            skipVaultPlugin: true
+            injector:
+              agentDefaults:
+                cpuLimit: "250m"
+                cpuRequest: "0"
+                memLimit: "64Mi"
+                memRequest: "0"
+              logFormat: "json"
+              affinity: ""
+            ui:
+              enabled: true
+            server:
+              ha:
+                enabled: true
+                replicas: 1
+                raft:
+                  enabled: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
 apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
