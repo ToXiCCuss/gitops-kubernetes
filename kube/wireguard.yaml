@@ -29,6 +29,8 @@ spec:
               value: vpn.rjst.de
             - name: WG_PORT
               value: "51820"
+            - name: WG_ENABLE_IPV6
+              value: "false"
           image: ghcr.io/wg-easy/wg-easy:15
           imagePullPolicy: IfNotPresent
           ports:
