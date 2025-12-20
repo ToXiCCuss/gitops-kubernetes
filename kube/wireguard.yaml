@@ -29,6 +29,8 @@ spec:
               value: vpn.rjst.de
             - name: WG_INSECURE
               value: "false"
+            - name: WG_DISABLE_IPV6
+              value: "true"
           image: ghcr.io/wg-easy/wg-easy:15
           imagePullPolicy: IfNotPresent
           ports:
