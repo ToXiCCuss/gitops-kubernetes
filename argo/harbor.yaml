@@ -26,7 +26,7 @@ spec:
               postgresql:
                 enabled: false
               externalDatabase:
-                host: postgresql.server.lan
+                host: vpn.rjst.de
                 port: 5432
                 user: app_harbor
                 password: <path:argocd/data/harbor#postgresqlPassword>
