@@ -71,8 +71,8 @@ spec:
             - mountPath: /etc/wireguard
               name: config
             - mountPath: /lib/modules
-            name: modules
-            readOnly: true
+              name: modules
+              readOnly: true
       restartPolicy: Always
       volumes:
         - name: config
