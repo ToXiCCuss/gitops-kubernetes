@@ -100,16 +100,16 @@ spec:
             port:
               number: 8080
 
----
-
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: maven-repo-pvc
-  namespace: jenkins
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 25Gi
+#---
+#
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: maven-repo-pvc
+#  namespace: jenkins
+#spec:
+#  accessModes:
+#    - ReadWriteOnce
+#  resources:
+#    requests:
+#      storage: 25Gi
