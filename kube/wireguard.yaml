@@ -60,6 +60,7 @@ spec:
               port: http
             timeoutSeconds: 1
           securityContext:
+            privileged: true
             capabilities:
               add:
                 - NET_ADMIN
