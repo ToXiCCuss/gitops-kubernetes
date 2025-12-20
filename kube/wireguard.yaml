@@ -71,7 +71,21 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: wg-easy-storage-claim
+            claimName: wg-easy-storage
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wg-easy-storage
+  namespace: wireguard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
 ---
 
 apiVersion: v1
