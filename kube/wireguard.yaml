@@ -111,3 +111,87 @@ spec:
   selector:
     app.kubernetes.io/name: wg-easy
   type: LoadBalancer
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: wg-easy-http
+  namespace: wireguard
+spec:
+  ports:
+    - name: http
+      port: 51821
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: wg-easy
+  type: ClusterIP
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: wireguard
+  namespace: wireguard
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "wireguard.vpn.rjst.de"
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        credentialName: wireguard-cert
+        mode: SIMPLE
+      hosts:
+        - "wireguard.vpn.rjst.de"
+
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wireguard-cert
+  namespace: istio-system
+spec:
+  secretName: wireguard-cert
+  issuerRef:
+    name: self-issuer
+    kind: ClusterIssuer
+  commonName: "wireguard.vpn.rjst.de"
+  dnsNames:
+    - "wireguard.vpn.rjst.de"
+
+---
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: wireguard
+  namespace: wireguard
+spec:
+  hosts:
+    - "wireguard.vpn.rjst.de"
+  gateways:
+    - wireguard
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: wg-easy-http
+            port:
+              number: 51821
