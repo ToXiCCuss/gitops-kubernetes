@@ -92,6 +92,6 @@ spec:
             prefix: /
       route:
         - destination:
-            host: http-web
+            host: harbor
             port:
               number: 80
