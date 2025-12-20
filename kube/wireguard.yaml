@@ -9,10 +9,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wg-easy
-  namespace: wg-easy
+  namespace: wireguard
 spec:
   replicas: 1
-  revisionHistoryLimit: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: wg-easy
@@ -27,9 +26,9 @@ spec:
         - name: wg-easy
           env:
             - name: WG_HOST
-              value: wg.hostname.com
+              value: vpn.rjst.de
             - name: WG_PORT
-              value: "30000"
+              value: "51820"
           image: ghcr.io/wg-easy/wg-easy:15
           imagePullPolicy: IfNotPresent
           ports:
@@ -73,3 +72,19 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: wg-easy-storage-claim
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: wg-easy-wg
+  namespace: wireguard
+spec:
+  ports:
+    - name: wg
+      port: 51820
+      protocol: UDP
+      targetPort: wg
+  selector:
+    app.kubernetes.io/name: wg-easy
+  type: LoadBalancer
