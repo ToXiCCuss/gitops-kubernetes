@@ -1,6 +1,22 @@
-= K3d
+= GitOps Kubernetes
+:sectnums:
 
+== Setup
+
+=== K3d
 ----
 k3d cluster create local --no-lb --k3s-arg "--disable=traefik@server:0"
 k3d cluster delete local
 ----
+
+=== ArgoCD
+
+----
+helm install argocd argo/argo-cd -n argocd -f .\argocd-values.yaml --create-namespace
+----
+
+Folders as app:
+
+. Vault
+. kube
+. argo
