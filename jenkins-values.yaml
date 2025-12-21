@@ -1,0 +1,11 @@
+controller:
+  jenkinsUrl: "https://jenkins.vpn.rjst.de"
+  admin:
+    password: "123"
+  resources:
+    requests:
+      cpu: "0"
+      memory: "0"
+    limits:
+      cpu: "4"
+      memory: "2Gi"
