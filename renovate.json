@@ -7,7 +7,7 @@
   ],
   "argocd": {
     "managerFilePatterns": [
-      "/argo/.+\\.yaml$/"
+      "/helm/.+\\.yaml$/"
     ]
   }
 }
