@@ -31,8 +31,8 @@ spec:
                 type: postgresql
                 driver: org.postgresql.Driver
                 url: "jdbc:postgresql://postgresql.server.lan:5432/artifactory"
-                user: app_artifactory
-                password: <path:argocd/data/artifactory#postgresqlPassword>
+                user: <path:argocd/data/artifactory#postgresql.user>
+                password: <path:argocd/data/artifactory#postgresql.password>
               nginx:
                 enabled: false
   syncPolicy:
