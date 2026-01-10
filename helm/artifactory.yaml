@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://charts.jfrog.io
     chart: artifactory-oss
-    targetRevision: 107.104.10
+    targetRevision: 107.125.10
     plugin:
       env:
         - name: HELM_VALUES
