@@ -30,7 +30,7 @@ spec:
               database:
                 type: postgresql
                 driver: org.postgresql.Driver
-                url: "jdbc:postgresql://docker01.rjst.de:5432/artifactory"
+                url: "jdbc:postgresql://docker01.vpn.rjst.de:5432/artifactory"
                 user: <path:argocd/data/artifactory#postgresql.user>
                 password: <path:argocd/data/artifactory#postgresql.password>
               nginx:
