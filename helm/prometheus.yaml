@@ -44,7 +44,7 @@ spec:
             kubeControllerManager:
               enabled: true
               endpoints:
-                - k8s.server.lan
+                - master01.vpn.rjst.de
             coreDns:
               enabled: true
             kubeDns:
@@ -52,15 +52,15 @@ spec:
             kubeEtcd:
               enabled: true
               endpoints:
-                - k8s.server.lan
+                - master01.vpn.rjst.de
             kubeScheduler:
               enabled: true
               endpoints:
-                - k8s.server.lan
+                - master01.vpn.rjst.de
             kubeProxy:
               enabled: true
               endpoints:
-                - k8s.server.lan
+                - master01.vpn.rjst.de
             kubeStateMetrics:
               enabled: true
             kube-state-metrics:
