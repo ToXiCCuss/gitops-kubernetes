@@ -212,7 +212,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-
+      - ServerSideApply=true
 ---
 
 apiVersion: monitoring.coreos.com/v1
