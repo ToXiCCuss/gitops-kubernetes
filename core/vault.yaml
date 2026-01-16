@@ -16,6 +16,7 @@ spec:
       env:
         - name: HELM_VALUES
           value: |
+            skipVaultPlugin: true
             injector:
               agentDefaults:
                 cpuLimit: "250m"
