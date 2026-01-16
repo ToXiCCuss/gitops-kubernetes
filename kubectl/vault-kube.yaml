@@ -19,8 +19,6 @@ spec:
               number: 8200
 
 ---
-
----
 apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
