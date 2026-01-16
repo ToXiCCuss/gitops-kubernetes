@@ -184,7 +184,7 @@ extraObjects:
                 HELM_OUTPUT=$(helm template $ARGOCD_APP_NAME -n $ARGOCD_APP_NAMESPACE -f <(echo "$ARGOCD_ENV_HELM_VALUES") .)
                 SKIP_VAULT=$(echo "$ARGOCD_ENV_HELM_VALUES" | grep -i "skipVaultPlugin" | grep -i "true" || true)
                 if [[ -z "$SKIP_VAULT" ]]; then
-                  echo "$HELM_OUTPUT" | argocd-vault-plugin generate -s argocd:argocd-vault-plugin-credentials -
+                  echo "$HELM_OUTPUT" | argocd-vault-plugin generate -
                 else
                   echo "$HELM_OUTPUT"
                 fi
