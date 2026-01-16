@@ -11,13 +11,11 @@ spec:
   source:
     repoURL: https://helm.releases.hashicorp.com
     targetRevision:  0.31.0
-    chart: harbor
+    chart: vault
     plugin:
-      name: argocd-vault-plugin-helm
       env:
         - name: HELM_VALUES
           value: |
-            skipVaultPlugin: true
             injector:
               agentDefaults:
                 cpuLimit: "250m"
